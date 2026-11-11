@@ -74,7 +74,9 @@ export function vueSeance() {
   h += `<p class="instr">${rich(q.consigne)}</p>`;
   const rempli = cur.repondu && q.type === 'choix' ? q.choix[q.bonne] : cur.repondu && q.type === 'saisie' ? q.reponses[0] : null;
   if (q.jp && q.type !== 'ordre') h += `<p class="jp big">${q.jp.includes('＿') ? richBlank(q.jp, rempli) : rich(q.jp)}</p>`;
-  if (q.type === 'ordre' && q.fr) h += `<p class="fr big-fr">${rich(q.fr)}</p>`;
+  // Remise en ordre : la traduction sert d'énoncé, sauf si la consigne la contient déjà (pas deux fois).
+  const frDansConsigne = q.fr && q.consigne.replace(/[«»"“”\s.]/g, '').includes(q.fr.replace(/[«»"“”\s.]/g, ''));
+  if (q.type === 'ordre' && q.fr && !frDansConsigne) h += `<p class="fr big-fr">${rich(q.fr)}</p>`;
   else if (q.fr && cur.repondu) h += `<p class="fr">${rich(q.fr)}</p>`;
   if (q.type === 'choix') {
     h += '<div class="choices">';

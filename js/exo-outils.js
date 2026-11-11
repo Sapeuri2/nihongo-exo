@@ -62,8 +62,19 @@ export function validerQuestion(x) {
     Object.assign(q, { morceaux });
   } else return null;
   for (const k of ['consigne', 'jp', 'fr', 'explication']) if (!furiganaOk(q[k])) return null;
+  if (consigneDonneReponse(q)) return null;
   for (const c of [...(q.choix || []), ...(q.reponses || []), ...(q.morceaux || [])]) if (!furiganaOk(c)) return null;
   return q;
+}
+
+// La consigne ne doit pas donner la réponse : réponse attendue écrite dedans, ou lecture en kana entre parenthèses.
+export function consigneDonneReponse(q) {
+  const c = normaliser(q.consigne, 'libre');
+  // (Les mots « ひらがな », « カタカナ », « かな » entre parenthèses indiquent l'écriture attendue : permis.)
+  const kanaEntreParentheses = [...sansFurigana(q.consigne).matchAll(/[（(]([\u3040-\u30ff・ー]+)[)）]/g)].map(m => m[1]);
+  if (kanaEntreParentheses.some(k => !/^(ひらがな|カタカナ|かな|カナ)$/.test(k))) return true;
+  const attendues = q.type === 'choix' ? [q.choix[q.bonne]] : q.type === 'saisie' ? q.reponses : [];
+  return attendues.some(r => { const a = normaliser(r, 'libre'); return a.length > 0 && /[\u3040-\u30ff\u3400-\u9fff]/.test(a) && c.includes(a); });
 }
 
 // ---------- Choix des cibles d'une séance ----------

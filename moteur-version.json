@@ -1,6 +1,6 @@
 {
- "version": "fa1ee3c",
- "date": "2026-11-11T05:16:44+00:00",
+ "version": "b300dc5",
+ "date": "2026-11-11T06:36:12+00:00",
  "source": "https://github.com/Sapeuri2/nihongo-central",
  "avertissement": "Fichiers gérés par l'agent central : ne pas les modifier dans ce dépôt.",
  "fichiers": {
@@ -14,11 +14,11 @@
   "js/app.js": "3a41eecd454228404584e3fe46649ac18058011f",
   "js/config.js": "329850b0f23b5c3c842cf5e3841d9d466e4817aa",
   "js/exo-ia.js": "08b3138c2796f704f9976c44361010619956bc27",
-  "js/exo-outils.js": "46c360c61bbd9e5126c015683c6e8f0bac02ca46",
+  "js/exo-outils.js": "9cb5c36602d9503e47c6482878cec26ae008a048",
   "js/exo-seance.js": "9b0ab15e99a91ebf21575eb72d01d29a09ed5ad6",
   "js/exo-sources.js": "2394af0f9fcf70b310c40d53dd5e2ddec397f895",
-  "js/exo-strategie.js": "f813fc7674edcc9e3e886e1bd31b2b392d57510c",
-  "js/exo-vues.js": "a77048b791ed4a278fa9440a50f2fab4f62ae457",
+  "js/exo-strategie.js": "854e3c877a3f57c68fc1dd705629bc3ee2978719",
+  "js/exo-vues.js": "8143751bc32fb73a06791a9c12ade3cb9b961a37",
   "js/liste.js": "ef09e9232b413b5739e646a4378e514e99c6e0c4",
   "js/state.js": "bb0ba9dff9fe254e96cd4044f5eeafe7aa90549a",
   "js/sync.js": "91cc7bc5a08da42b294d749dd840384056bb6a15",

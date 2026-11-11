@@ -16,6 +16,9 @@ Principes :
 - Japonais naturel, grammaire et vocabulaire de niveau N5/N4 (ou celui de la cible). Pas de 私は inutile.
 - Nouveautés : la question peut enseigner (consigne explicite, indice dans la phrase), puis l'explication fixe le sens et la lecture.
 - Adapter la difficulté : réussite élevée → plus de questions à taper, moins de furigana, format JLPT ; réussite faible → consolider.
+- Reconnaître un kanji n'est pas savoir le lire : distingue toujours SENS et LECTURE. Pour un kanji ou un mot dont il connaît sans doute le sens (kanji connus, mots déjà vus, carnet), fais-lui plutôt PRODUIRE la lecture (saisie en hiragana) que reconnaître le sens.
+- Monter d'un cran ce qui est réussi : reconnaître → lire → écrire / retrouver soi-même (ex. traduire 三時半 → plus tard, trouver さんじはん sans aide).
+- La consigne ne donne JAMAIS la réponse ni d'indice qui la rend évidente : pas de lecture entre parenthèses, pas de décomposition du kanji (« trois arbres »), pas du mot attendu.
 - Styles JLPT possibles (indique-le dans « style ») : 読み (lecture), 表記 (écriture), 文脈規定 (mot qui convient), 言い換え類義 (même sens), 用法 (bon emploi), 文法形式 (bonne forme), 文の組み立て (remise en ordre). Écris-les « à la manière du JLPT », jamais copiés.
 Format :
 - Furigana {漢字|かな} sur tout kanji absent de la liste « kanji connus » ; les kanji connus s'écrivent sans furigana. Gras **…** pour le mot visé.
@@ -23,7 +26,7 @@ Format :
 - type « choix » : 4 choix (« choix »), « bonne » = indice (0 à 3) de la bonne réponse. Deux choix ne doivent jamais s'écrire pareil.
 - type « saisie » : réponse courte à taper au clavier japonais : lecture en hiragana d'un mot (script « kana »), mot qui manque dans une phrase (« kana »), ou courte traduction français → japonais (script « libre »). « reponses » = TOUTES les réponses acceptées (hiragana, et forme en kanji si possible).
 - type « ordre » : « morceaux » = 3 à 7 morceaux dans l'ordre correct ; un seul ordre naturel possible.
-- « jp » : la phrase japonaise (trou noté ＿ si besoin) ; « fr » : sa traduction (montrée après la réponse) ; « consigne » : en français, courte.
+- « jp » : la phrase japonaise (trou noté ＿ si besoin) ; « fr » : sa traduction (montrée après la réponse) ; « consigne » : courte, dans la langue demandée (voir « Langue des consignes »).
 - « explication » : 1 phrase en français, montrée juste après la réponse. « intention » : pourquoi tu poses cette question (quelques mots).
 - « cible » : l'identifiant de la cible visée, recopié tel quel (ex. G:n5-12, mot:日本, kanji:町).
 Réponds uniquement en JSON, selon le schéma.`;
@@ -64,7 +67,7 @@ Tu reçois son carnet et SEULEMENT ses erreurs (question, bonne réponse, sa ré
 2. « erreurs » : pour chaque erreur (identifiant recopié), « pourquoi » = la cause précise en français simple (confusion entre deux mots, règle pas acquise, lecture du kanji…), « retenir » = un moyen court de ne plus se tromper (règle, contraste, moyen mnémotechnique). Tutoiement, 1 à 2 phrases chacun.
 3. « consignes » : 2 à 4 consignes concrètes pour la suite, d'après les causes communes.
 4. « etoiles » : identifiants de leçons (ex. G:n5-12) qu'il devrait étoiler pour les revoir, seulement parmi les cibles fournies et seulement si l'erreur montre que la leçon n'est pas comprise.
-5. « carnet » : réécris son carnet (120 mots maximum) : ses difficultés durables, ses progrès, ce qu'il faut travailler ensuite. Garde ce qui reste vrai, retire ce qui est réglé.
+5. « carnet » : réécris son carnet (120 mots maximum) : ses difficultés durables, ses progrès, ce qu'il faut travailler ensuite. Distingue sens et lecture (ex. « 森 : sens connu, lecture à revoir »). Garde ce qui reste vrai, retire ce qui est réglé.
 Réponds uniquement en JSON, selon le schéma.`;
 
 export const SCHEMA_BILAN = {
@@ -97,6 +100,10 @@ export function messageSeance({ etats, liste, carnet, reussite, q }) {
   const lignes = [];
   lignes.push(`Carnet : ${carnet || '(vide : première séance)'}`);
   lignes.push(`Réussite récente : ${reussite == null ? 'inconnue' : `${Math.round(reussite * 100)} %`}`);
+  // Bonne réussite : consignes courtes en japonais (comme l'appli kanji à partir du bloc 9) ; le français reste pour les nouveautés et les consignes difficiles.
+  lignes.push(reussite != null && reussite >= 0.75
+    ? 'Langue des consignes : JAPONAIS, très courtes (読み方は？, ＿に入るものは？, 正しいものはどれ？, 意味は？, ならべかえて ください…), avec des kanji connus ou des kana ; en français seulement pour les nouveautés et les consignes difficiles.'
+    : 'Langue des consignes : français, courtes.');
   lignes.push(`Questions à écrire : ${q.epingle + q.niveau + q.nouveau} (dont environ ${q.saisie} à taper). Répartition : ${q.epingle} sur les cibles épinglées, ${q.niveau} sur le niveau en cours, ${q.nouveau} nouveautés.`);
   lignes.push(`Niveaux en cours : ${etats.map(e => `${e.cours.appli.nom} ${e.niveau}`).join(', ')}`);
   lignes.push(`Kanji connus : ${kanjiConnus(etats).join('') || '(aucun : écris tous les kanji avec furigana)'}`);

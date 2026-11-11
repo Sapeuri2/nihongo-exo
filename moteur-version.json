@@ -1,0 +1,30 @@
+{
+ "version": "fa1ee3c",
+ "date": "2026-11-11T05:16:44+00:00",
+ "source": "https://github.com/Sapeuri2/nihongo-central",
+ "avertissement": "Fichiers gérés par l'agent central : ne pas les modifier dans ce dépôt.",
+ "fichiers": {
+  "MOTEUR.md": "1377d07e93ac38cd39e906b43910a53b07a87fca",
+  "css/exo.css": "8b4280db24d33f59fead0deec6da65595cafcdbc",
+  "css/style.css": "d9fe5b2ecaf6fcfca86b30004f6a8be4aafe7f65",
+  "css/theme.css": "6f064ac54fb8bdd886c030bc4a079b1a0c1dde5b",
+  "icons/icon-192.png": "051771be4a743f812e18a015f7358c2f1853c5ff",
+  "icons/icon-512.png": "4a5dc4a5a53e27ad59b165b8767b478960d1e66d",
+  "index.html": "4ad78134cff1249eba33d9a303c6b70abc3f1496",
+  "js/app.js": "3a41eecd454228404584e3fe46649ac18058011f",
+  "js/config.js": "329850b0f23b5c3c842cf5e3841d9d466e4817aa",
+  "js/exo-ia.js": "08b3138c2796f704f9976c44361010619956bc27",
+  "js/exo-outils.js": "46c360c61bbd9e5126c015683c6e8f0bac02ca46",
+  "js/exo-seance.js": "9b0ab15e99a91ebf21575eb72d01d29a09ed5ad6",
+  "js/exo-sources.js": "2394af0f9fcf70b310c40d53dd5e2ddec397f895",
+  "js/exo-strategie.js": "f813fc7674edcc9e3e886e1bd31b2b392d57510c",
+  "js/exo-vues.js": "a77048b791ed4a278fa9440a50f2fab4f62ae457",
+  "js/liste.js": "ef09e9232b413b5739e646a4378e514e99c6e0c4",
+  "js/state.js": "bb0ba9dff9fe254e96cd4044f5eeafe7aa90549a",
+  "js/sync.js": "91cc7bc5a08da42b294d749dd840384056bb6a15",
+  "js/text.js": "615e7530243e9c3a9e2cace94adc643767a67d15",
+  "js/ui.js": "a4390fac29bb8e45dfeee5af6415c7d0f6fdee51",
+  "manifest.webmanifest": "e2e90edae0f259efc28d25ccce892738a01fdc10",
+  "sw.js": "cabd05a1242c11c33461b0c8fe172600c5dc817f"
+ }
+}

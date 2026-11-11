@@ -1,0 +1,39 @@
+/* Apparence propre au Challenger (le reste vient de style.css, commun aux applis). */
+.exo-hero { grid-template-columns: 2fr 1fr; }
+.ia-etat { margin: -6px 0 14px; }
+.exo-cibles { list-style: none; margin: 0; padding: 0; }
+.exo-cibles li { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; }
+.carnet p { white-space: pre-wrap; margin: .5em 0 0; }
+.bilan-lien { display: flex; justify-content: space-between; padding: 10px 0; color: var(--text); text-decoration: none; }
+.strategie { background: var(--card); border-left: 4px solid var(--accent); border-radius: 8px; padding: 8px 12px; font-size: .95rem; }
+.bandeau { margin: 6px 0 10px; }
+.bandeau.erreur { background: var(--card); border: 1px solid var(--bad); border-radius: 8px; padding: 8px 12px; }
+.bandeau.erreur .actions { margin: 6px 0 0; }
+.attente { text-align: center; padding: 30px 10px; }
+.sablier { font-size: 2.2rem; animation: tourne 2s linear infinite; display: inline-block; }
+@keyframes tourne { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sablier { animation: none; } }
+
+/* Réponse tapée au clavier japonais. */
+.saisie { display: flex; gap: 8px; margin: 14px 0; }
+.saisie input {
+  flex: 1; min-width: 0; font-size: 1.3rem; padding: 10px 12px; border-radius: 10px;
+  border: 2px solid var(--line); background: var(--card); color: var(--text);
+}
+.saisie input:focus { outline: none; border-color: var(--accent); }
+.saisie.good input { border-color: var(--good); }
+.saisie.bad input { border-color: var(--bad); }
+.saisie.doute input { border-color: var(--mid); }
+
+/* Bilan. */
+.bilan-erreur { border-top: 1px solid var(--line); padding: 10px 0; }
+.bilan-erreur:first-of-type { border-top: 0; }
+.bilan-erreur .jp { font-size: 1.1rem; line-height: 2; margin: 0; }
+.bilan-erreur .ok { color: var(--good); }
+.bilan-erreur .ko { color: var(--bad); }
+.retenir { background: var(--bg); border-radius: 8px; padding: 6px 10px; }
+.actions .btn small { display: block; }
+
+@media (max-width: 420px) {
+  .exo-hero { grid-template-columns: 1fr; }
+}

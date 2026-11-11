@@ -1,0 +1,11 @@
+/* Couleur propre au Challenger : violet. */
+:root {
+  --accent: #6b3fb5;
+  --accent-text: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #b493f0;
+    --accent-text: #1a1325;
+  }
+}

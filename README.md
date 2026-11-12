@@ -1,6 +1,6 @@
 # 挑戦 Challenger
 
-Appli web perso (violette) qui **défie** : des séances de 30 questions de japonais écrites par une IA
+Appli web perso (violette) qui **défie** : des séances de 35 questions de japonais écrites par une IA
 à partir de ce que tu fais dans les applis [grammaire](https://sapeuri2.github.io/nihongo-grammaire/),
 [vocabulaire](https://sapeuri2.github.io/nihongo-vocabulaire/) et [kanji](https://sapeuri2.github.io/nihongo-kanji/).
 

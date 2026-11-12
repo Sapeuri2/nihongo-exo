@@ -65,3 +65,5 @@ details.choisir summary h2 { margin: 0; }
 /* Réglages : listes et choix qui tiennent sur un petit téléphone. */
 .card select { max-width: 100%; min-width: 0; }
 .card label.row { flex-wrap: wrap; }
+.credit { margin: -8px 0 6px; }
+.credit.bas { color: var(--bad); }

@@ -15,6 +15,16 @@ const date = t => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', mont
 
 // ---------- Accueil ----------
 
+// Crédit Claude restant (estimé d'après les tokens exacts de chaque appel, synchronisé entre appareils).
+function ligneCredit() {
+  const c = X.credit();
+  if (!c) return '<p class="credit small">💳 Crédit Claude : <a href="#/reglages">indique ton crédit acheté</a> pour voir ce qu’il reste.</p>';
+  const parSeance = c.parSeance || 0.08;
+  const n = Math.max(0, Math.floor(c.reste / parSeance));
+  const bas = c.reste < 0.5;
+  return `<p class="credit small${bas ? ' bas' : ''}">💳 Crédit Claude : il reste <strong>≈ ${IA.dollars(Math.max(0, c.reste))}</strong> (≈ ${n} séance${n > 1 ? 's' : ''})${bas ? ' · bientôt épuisé : recharge sur la Console ou passe à Gemini' : ''}</p>`;
+}
+
 export function vueAccueil() {
   const s = X.get();
   let h = '';
@@ -33,7 +43,8 @@ export function vueAccueil() {
   const claude = IA.estClaude();
   const modele = IA.modeleActuel();
   const etatIA = `IA : ${claude ? esc(modele) : `Gemini${modele ? ` (${esc(modele)})` : ''}`} · aujourd’hui : ${c.appels} appel${c.appels > 1 ? 's' : ''}${claude ? ` · ${IA.dollars(c.cout)} (total ${IA.dollars(c.coutTotal)})` : ''}`;
-  h += `<p class="muted small ia-etat">${cle ? etatIA : `Pas encore de clé ${claude ? 'Claude' : 'IA'} : <a href="#/reglages">ajoute ta clé</a> pour des questions écrites pour toi.`}</p>`;
+  if (claude && cle) h += ligneCredit();
+  h += `<p class="muted small ia-etat">${cle ? etatIA :`Pas encore de clé ${claude ? 'Claude' : 'IA'} : <a href="#/reglages">ajoute ta clé</a> pour des questions écrites pour toi.`}</p>`;
 
   const etoilesDe = a => Object.values(progression(a)?.etoiles || {}).filter(e => e?.on).length;
   const parAppli = APPS.map(a => [a.nom, etoilesDe(a)]).filter(([, n]) => n);
@@ -229,6 +240,15 @@ export function vueReglages(modeles = null, message = '') {
       <p class="small">Dépensé sur cet appareil : aujourd’hui ${IA.dollars(claude ? c.cout : 0)} · depuis le début ${IA.dollars(c.coutTotal)} <span class="muted">(estimation ; le vrai solde est sur la Console)</span></p>` : ''}
     <div class="row"><input type="password" id="cle-claude" placeholder="${r.cleClaude ? 'Nouvelle clé (sk-ant-…)' : 'Colle ta clé (sk-ant-…)'}" autocomplete="off"><button class="btn primary" data-act="cle-claude">Enregistrer et tester</button></div>
     <p class="small" id="claude-msg">${esc(claude ? message : '')}</p>
+    <h3>💳 Crédit</h3>
+    ${(() => {
+      const cr = X.credit();
+      return cr ? `<p class="small">Il reste <strong>≈ ${IA.dollars(Math.max(0, cr.reste))}</strong> · dépensé : ${IA.dollars(cr.depense)}${cr.parSeance ? ` · ≈ ${IA.dollars(cr.parSeance)} par séance` : ''} <span class="muted">(tous tes appareils)</span></p>`
+        : '<p class="small">Indique ce que tu as acheté sur la Console : le Challenger déduit le coût de chaque séance.</p>';
+    })()}
+    <div class="row"><input type="text" id="credit-achat" inputmode="decimal" autocomplete="off" placeholder="Crédit acheté ($), ex. 5"><button class="btn" data-act="credit-achat">Ajouter</button></div>
+    <div class="row"><input type="text" id="credit-solde" inputmode="decimal" autocomplete="off" placeholder="Solde lu sur la Console ($)"><button class="btn" data-act="credit-solde">Corriger</button></div>
+    <p class="muted small">« Ajouter » à chaque achat. « Corriger » si le reste affiché ici s’éloigne du solde de la Console (Billing).</p>
     <label class="row small">Modèle : <select data-act="modele-claude">${IA.MODELES_CLAUDE.map(m => `<option value="${esc(m.nom)}" ${m.nom === r.modeleClaude ? 'selected' : ''}>${esc(m.titre)}</option>`).join('')}</select></label>
     ${r.cleClaude ? '<button class="link small" data-act="oublier-cle-claude">Retirer la clé Claude de cet appareil</button>' : ''}
     <details class="small"><summary>Où trouver ma clé ?</summary><ol>

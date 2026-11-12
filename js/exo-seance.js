@@ -9,12 +9,13 @@ import { CONFIG } from './config.js';
 import { APPS, appParLettre, chargerCours, etatAppli } from './exo-sources.js';
 import * as IA from './exo-ia.js';
 import { SCHEMA_BILAN, SCHEMA_SEANCE, SYSTEME_BILAN, SYSTEME_SEANCE, depuisExercice, messageBilan, messageSeance, resumeQuestion } from './exo-strategie.js';
-import { MARQUES, elaguerBanque, fusionBanque, fusionBilans, fusionCarnet, quotas, reprises, tirerPondere, validerQuestion, verifierSaisie, verifierTrous } from './exo-outils.js';
+import { MARQUES, ajouterAchat, ajouterDepense, corrigerCredit, elaguerBanque, fusionBanque, fusionBilans, fusionCarnet, fusionCredit, resteCredit, quotas, reprises, tirerPondere, validerQuestion, verifierSaisie, verifierTrous } from './exo-outils.js';
 
 // Règles de fusion entre appareils des champs propres au Challenger.
 S.fusionChamp('banque', fusionBanque);
 S.fusionChamp('carnet', fusionCarnet);
 S.fusionChamp('bilans', fusionBilans);
+S.fusionChamp('credit', fusionCredit);
 
 const SEANCE_KEY = `${CONFIG.storageKey}:seance`;
 const PARTS = { reprise: CONFIG.partReprise, nouveau: CONFIG.partNouveau, grammaire: CONFIG.partGrammaire, saisie: CONFIG.partSaisie, trous: CONFIG.trousMin };
@@ -43,6 +44,12 @@ export const bilans = () => Object.values(S.get().bilans || {}).sort((a, b) => b
 function maj(champs) {
   S.replace({ ...S.get(), ...champs });
 }
+
+// Crédit Claude : chaque appel payant est ajouté au compteur de cet appareil (synchronisé avec les autres).
+IA.onCout(cout => maj({ credit: ajouterDepense(S.get().credit, IA.appareil(), cout) }));
+export const credit = () => resteCredit(S.get().credit);
+export function acheterCredit(montant) { maj({ credit: ajouterAchat(S.get().credit, montant) }); }
+export function corrigerSolde(solde) { maj({ credit: corrigerCredit(S.get().credit, solde) }); }
 
 // Réussite des 3 dernières séances (pour adapter la difficulté).
 export function reussite() {

@@ -48,6 +48,18 @@ function compter(tokens, cout = 0) {
   const jour = new Date().toISOString().slice(0, 10);
   const c = compteurDuJour();
   enregistrer({ jour, appels: c.appels + 1, tokens: c.tokens + (tokens || 0), cout: c.cout + cout, coutTotal: c.coutTotal + cout });
+  if (cout) ecouteursCout.forEach(f => f(cout));
+}
+
+// Coût de chaque appel payant : la séance l'ajoute au crédit synchronisé (exo-seance).
+const ecouteursCout = new Set();
+export const onCout = f => { ecouteursCout.add(f); };
+
+// Identifiant de cet appareil (pour le compteur de dépenses synchronisé), gardé sur l'appareil.
+export function appareil() {
+  let id = reglages().appareil;
+  if (!id) { id = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`; enregistrer({ appareil: id }); }
+  return id;
 }
 
 export const dollars = x => `${x < 0.01 && x > 0 ? x.toFixed(3) : x.toFixed(2)} $`.replace('.', ',');

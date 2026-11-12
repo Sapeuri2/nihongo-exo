@@ -158,6 +158,15 @@ async function onClick(e) {
       if (cle) testerClaude(cle);
       break;
     }
+    case 'credit-achat': case 'credit-solde': {
+      const champ = document.getElementById(act);
+      const v = parseFloat(String(champ?.value || '').replace(',', '.'));
+      if (!(v >= 0) || v > 1000) { toast('Montant en dollars, ex. 5'); break; }
+      if (act === 'credit-achat') { if (v > 0) { X.acheterCredit(v); toast(`💳 ${IA.dollars(v)} ajoutés`); } }
+      else { X.corrigerSolde(v); toast('💳 Solde corrigé'); }
+      render();
+      break;
+    }
     case 'oublier-cle-claude':
       if (confirm('Retirer la clé Claude de cet appareil ?')) { IA.enregistrer({ cleClaude: '' }); reglagesEtat = { modeles: null, message: '' }; render(); }
       break;

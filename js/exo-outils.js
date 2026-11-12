@@ -187,3 +187,53 @@ export function elaguerBanque(banque, items, max) {
   const garder = new Set(ids.sort((a, b) => score(a) - score(b)).slice(0, max));
   return Object.fromEntries(Object.entries(banque).filter(([id]) => garder.has(id)));
 }
+
+// ---------- Crédit Claude (synchronisé : PC et téléphone voient le même reste) ----------
+// credit = { achats: { id: { montant, t } }, depenses: { appareil: { total, appels, t } }, correction: { solde, t, depensesA } }
+// Chaque appareil n'augmente que son propre compteur : la fusion garde le plus grand ; la correction la plus récente gagne.
+
+const somme = o => Object.values(objet(o)).reduce((s, x) => s + (+x?.total || 0), 0);
+
+export function fusionCredit(a, b) {
+  const x = objet(a);
+  const y = objet(b);
+  const depenses = { ...objet(x.depenses) };
+  for (const [k, v] of Object.entries(objet(y.depenses))) if (!depenses[k] || (+v?.total || 0) > (+depenses[k].total || 0)) depenses[k] = v;
+  const cx = x.correction?.t || 0;
+  const cy = y.correction?.t || 0;
+  const out = { achats: { ...objet(x.achats), ...objet(y.achats) }, depenses };
+  const correction = cy > cx ? y.correction : x.correction;
+  if (correction) out.correction = correction;
+  return out;
+}
+
+export function ajouterAchat(credit, montant, t = Date.now()) {
+  const c = objet(credit);
+  return { ...c, achats: { ...objet(c.achats), [`a${t.toString(36)}`]: { montant: +montant, t } } };
+}
+
+export function ajouterDepense(credit, appareil, cout, t = Date.now(), depart = 0) {
+  const c = objet(credit);
+  const d = objet(c.depenses)[appareil] || { total: depart, appels: 0 };
+  return { ...c, depenses: { ...objet(c.depenses), [appareil]: { total: (+d.total || 0) + cout, appels: (d.appels || 0) + 1, t } } };
+}
+
+// Le vrai solde lu sur la Console : le compte repart de là.
+export function corrigerCredit(credit, solde, t = Date.now()) {
+  const c = objet(credit);
+  return { ...c, correction: { solde: +solde, t, depensesA: somme(c.depenses) } };
+}
+
+// Ce qui reste (en $), ce qui a été dépensé, et le coût moyen d'une séance (2 appels) ; null si aucun crédit saisi.
+export function resteCredit(credit) {
+  const c = objet(credit);
+  const depense = somme(c.depenses);
+  const achats = Object.values(objet(c.achats));
+  const appels = Object.values(objet(c.depenses)).reduce((s, x) => s + (x?.appels || 0), 0);
+  const parSeance = appels >= 2 ? (depense / appels) * 2 : null;
+  let reste;
+  if (c.correction) reste = c.correction.solde + achats.filter(a => a.t > c.correction.t).reduce((s, a) => s + a.montant, 0) - (depense - (c.correction.depensesA || 0));
+  else if (achats.length) reste = achats.reduce((s, a) => s + a.montant, 0) - depense;
+  else return null;
+  return { reste, depense, parSeance };
+}

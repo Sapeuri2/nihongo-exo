@@ -17,6 +17,7 @@ Principes :
 - Nouveautés : la question peut enseigner (consigne explicite, indice dans la phrase), puis l'explication fixe le sens et la lecture.
 - Adapter la difficulté : réussite élevée → plus de questions à taper, moins de furigana, format JLPT ; réussite faible → consolider.
 - Reconnaître un kanji n'est pas savoir le lire : distingue toujours SENS et LECTURE. Pour un kanji ou un mot dont il connaît sans doute le sens (kanji connus, mots déjà vus, carnet), fais-lui plutôt PRODUIRE la lecture (saisie en hiragana) que reconnaître le sens.
+- GRAMMAIRE : le Challenger est là pour challenger. Fais PRODUIRE la forme plutôt que la reconnaître : saisie de la bonne forme dans une phrase à trou (le mot à transformer donné dans « jp » entre 【 】 à sa forme du dictionnaire, ex. ＿【行く】 → いって) ; traduction courte français → japonais (script « libre ») qui oblige à utiliser le point visé ; remise en ordre de phrases longues (5 à 7 morceaux, avec から, とき, ので, une relative…) ; choix aux pièges proches (は/が, に/で, ている/てある, たい/たがる, から/ので…) où deux formes sont plausibles mais une seule va dans le contexte. Combine souvent deux points de grammaire dans une même phrase, et place-les dans des contextes inattendus. Ne repose pas un point trivial qu'il réussit déjà (carnet, réussite).
 - Monter d'un cran ce qui est réussi : reconnaître → lire → écrire / retrouver soi-même (ex. traduire 三時半 → plus tard, trouver さんじはん sans aide).
 - La consigne ne donne JAMAIS la réponse ni d'indice qui la rend évidente : pas de lecture entre parenthèses, pas de décomposition du kanji (« trois arbres »), pas du mot attendu.
 - Styles JLPT possibles (indique-le dans « style ») : 読み (lecture), 表記 (écriture), 文脈規定 (mot qui convient), 言い換え類義 (même sens), 用法 (bon emploi), 文法形式 (bonne forme), 文の組み立て (remise en ordre). Écris-les « à la manière du JLPT », jamais copiés.
@@ -104,18 +105,27 @@ export function messageSeance({ etats, liste, carnet, reussite, q }) {
   lignes.push(reussite != null && reussite >= 0.75
     ? 'Langue des consignes : JAPONAIS, très courtes (読み方は？, ＿に入るものは？, 正しいものはどれ？, 意味は？, ならべかえて ください…), avec des kanji connus ou des kana ; en français seulement pour les nouveautés et les consignes difficiles.'
     : 'Langue des consignes : français, courtes.');
-  lignes.push(`Questions à écrire : ${q.epingle + q.niveau + q.nouveau} (dont environ ${q.saisie} à taper). Répartition : ${q.epingle} sur les cibles épinglées, ${q.niveau} sur le niveau en cours, ${q.nouveau} nouveautés.`);
+  const gram = q.grammaire || 0; // (séance commencée avant l'ajout de la part de grammaire)
+  lignes.push(`Questions à écrire : ${gram + q.epingle + q.niveau + q.nouveau} (dont environ ${q.saisie} à taper). Répartition : ${gram} sur la GRAMMAIRE (cible G:…, voir « Cibles grammaire »), ${q.epingle} sur les cibles épinglées, ${q.niveau} sur le niveau en cours, ${q.nouveau} nouveautés.`);
   lignes.push(`Niveaux en cours : ${etats.map(e => `${e.cours.appli.nom} ${e.niveau}`).join(', ')}`);
   lignes.push(`Kanji connus : ${kanjiConnus(etats).join('') || '(aucun : écris tous les kanji avec furigana)'}`);
 
-  const cibles = { epingle: [], niveau: [], nouveau: [] };
-  for (const e of etats) cibles.epingle.push(...e.etoiles.map(ligneLecon));
+  const estG = e => e.cours.appli.id === 'grammaire';
+  const g = etats.find(estG);
+  const autres = etats.filter(e => !estG(e));
+  const cibles = { grammaire: [], epingle: [], niveau: [], nouveau: [] };
+  // Grammaire : d'abord les leçons étoilées, puis les leçons faites les plus ratées ou les plus anciennes.
+  if (g) {
+    cibles.grammaire.push(...g.etoiles.map(l => `${ligneLecon(l)} ⭐`));
+    cibles.grammaire.push(...g.duNiveau.filter(l => !g.etoiles.includes(l)).slice(0, Math.max(3, 10 - g.etoiles.length)).map(ligneLecon));
+  }
+  for (const e of autres) cibles.epingle.push(...e.etoiles.map(ligneLecon));
   // Mots de Ma liste : d'abord les plus ratés et ceux à revoir.
   const mots = [...liste].sort((a, b) => (b.stats.faux - a.stats.faux) || (a.stats.boite - b.stats.boite)).slice(0, 12);
   cibles.epingle.push(...mots.map(m => `- mot:${plain(m.jp)} ${motCourt(m)}${m.stats.vu ? ` (juste ${m.stats.juste}/${m.stats.vu})` : ''}`));
   // Niveau en cours : les leçons faites les plus faibles ou les plus anciennes, réparties entre les applis.
-  const parAppli = Math.max(2, Math.ceil(8 / etats.length));
-  for (const e of etats) cibles.niveau.push(...e.duNiveau.filter(l => !e.etoiles.includes(l)).slice(0, parAppli).map(ligneLecon));
+  const parAppli = Math.max(2, Math.ceil(8 / Math.max(1, autres.length)));
+  for (const e of autres) cibles.niveau.push(...e.duNiveau.filter(l => !e.etoiles.includes(l)).slice(0, parAppli).map(ligneLecon));
   // Nouveautés : kanji des prochaines leçons de kanji, et suite des leçons de vocabulaire du niveau.
   for (const e of etats) {
     if (e.cours.appli.id === 'kanji') {
@@ -124,7 +134,12 @@ export function messageSeance({ etats, liste, carnet, reussite, q }) {
       for (const l of e.aVenir.slice(0, 2)) cibles.nouveau.push(...l.mots.slice(0, 4).map(m => `- mot:${plain(m.jp)} ${motCourt(m)}`));
     }
   }
+  // Grammaire finie (toutes les leçons faites) : nouveautés de grammaire du niveau suivant.
+  if (g && g.cours.lecons.length && g.faites.length === g.cours.lecons.length) {
+    cibles.nouveau.push(`- jlpt-grammaire:N4 points de grammaire N4 courants qu'il n'a pas encore vus (à toi de choisir ; la question enseigne, l'explication fixe la règle)`);
+  }
   cibles.nouveau.push(`- jlpt:${etats.find(e => e.cours.appli.id === 'kanji')?.niveau || 'N4'} mots ou kanji très courants du JLPT de ce niveau, pas encore vus (à toi de choisir)`);
+  lignes.push('Cibles grammaire (⭐ = étoilée, prioritaire) :', ...(cibles.grammaire.length ? cibles.grammaire : ['- (aucune leçon faite : grammaire de son niveau, choisie par toi)']));
   lignes.push('Cibles épinglées (prioritaires) :', ...(cibles.epingle.length ? cibles.epingle.slice(0, 20) : ['- (aucune : renforce le niveau en cours)']));
   lignes.push('Cibles du niveau en cours (déjà faites) :', ...(cibles.niveau.length ? cibles.niveau : ['- (aucune)']));
   lignes.push('Cibles nouveautés (pas encore vues) :', ...cibles.nouveau.slice(0, 14));

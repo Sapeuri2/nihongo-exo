@@ -30,9 +30,12 @@ export function vueAccueil() {
     <button class="btn" data-act="demarrer-sans-ia" ${s ? 'disabled' : ''}>Sans IA<small>exercices de tes applis, sans coût</small></button></section>`;
   h += `<p class="muted small ia-etat">${cle ? `IA : Gemini${IA.reglages().modele ? ` (${esc(IA.reglages().modele.replace(/^models\//, ''))})` : ''} · aujourd’hui : ${c.appels} appel${c.appels > 1 ? 's' : ''}` : 'Pas encore de clé IA : <a href="#/reglages">ajoute ta clé Gemini</a> pour des questions écrites pour toi.'}</p>`;
 
-  const etoiles = APPS.reduce((n, a) => n + Object.values(progression(a)?.etoiles || {}).filter(e => e?.on).length, 0);
+  const etoilesDe = a => Object.values(progression(a)?.etoiles || {}).filter(e => e?.on).length;
+  const parAppli = APPS.map(a => [a.nom, etoilesDe(a)]).filter(([, n]) => n);
+  const etoiles = parAppli.reduce((n, [, x]) => n + x, 0);
   h += `<section class="card"><h2>Ce que je vais te faire travailler</h2><ul class="exo-cibles">
-    <li><span>⭐</span> ${etoiles} leçon${etoiles > 1 ? 's' : ''} étoilée${etoiles > 1 ? 's' : ''} <span class="muted small">(en priorité)</span></li>
+    <li><span>⭐</span> ${etoiles} leçon${etoiles > 1 ? 's' : ''} étoilée${etoiles > 1 ? 's' : ''} <span class="muted small">(${parAppli.length ? parAppli.map(([nom, n]) => `${esc(nom.toLowerCase())} ${n}`).join(' · ') : 'en priorité'})</span></li>
+    <li><span>📝</span> une grosse part de grammaire à produire <span class="muted small">(tes ⭐ de grammaire d’abord)</span></li>
     <li><span>📌</span> ${L.list().length} mot${L.list().length > 1 ? 's' : ''} de Ma liste</li>
     <li><span>📚</span> les leçons déjà faites de ton niveau en cours</li>
     <li><span>✨</span> ${pct(CONFIG.partNouveau)} de nouveautés du JLPT de ton niveau</li>

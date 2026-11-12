@@ -80,13 +80,16 @@ export function consigneDonneReponse(q) {
 // ---------- Choix des cibles d'une séance ----------
 
 // Répartition d'une séance de `taille` questions : reprises (déjà vues, à revoir), nouveautés (pas encore vues),
-// le reste partagé entre ce qui est épinglé (⭐ leçons, 📌 mots) et le niveau en cours.
+// une part fixe de grammaire (⭐ de grammaire d'abord), le reste partagé entre ce qui est épinglé (⭐ leçons, 📌 mots)
+// et le niveau en cours.
 export function quotas(taille, parts, nbReprisesDispo) {
   const reprise = Math.min(nbReprisesDispo, Math.round(taille * parts.reprise));
   const nouveau = Math.round(taille * parts.nouveau);
   const reste = taille - reprise - nouveau;
-  const epingle = Math.round(reste * 0.55);
-  return { reprise, nouveau, epingle, niveau: reste - epingle, saisie: Math.round((taille - reprise) * parts.saisie) };
+  const grammaire = Math.round(reste * (parts.grammaire || 0));
+  const autres = reste - grammaire;
+  const epingle = Math.round(autres * 0.55);
+  return { reprise, nouveau, grammaire, epingle, niveau: autres - epingle, saisie: Math.round((taille - reprise) * parts.saisie) };
 }
 
 // Questions déjà posées par le Challenger à reprendre : d'abord celles à revoir (ratées, échéance passée).

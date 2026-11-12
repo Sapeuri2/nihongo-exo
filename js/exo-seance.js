@@ -17,7 +17,7 @@ S.fusionChamp('carnet', fusionCarnet);
 S.fusionChamp('bilans', fusionBilans);
 
 const SEANCE_KEY = `${CONFIG.storageKey}:seance`;
-const PARTS = { reprise: CONFIG.partReprise, nouveau: CONFIG.partNouveau, saisie: CONFIG.partSaisie };
+const PARTS = { reprise: CONFIG.partReprise, nouveau: CONFIG.partNouveau, grammaire: CONFIG.partGrammaire, saisie: CONFIG.partSaisie };
 const ecouteurs = new Set();
 let seance = charger();
 
@@ -127,10 +127,14 @@ function completerSansIA(etats) {
   const manque = CONFIG.seanceTaille - s.file.length;
   const tirer = (lecons, n) => melanger(lecons.flatMap(l => l.exercices.map(ex => [l, ex]))).slice(0, n);
   const choisis = [];
-  const epingle = etats.flatMap(e => e.etoiles);
-  const niveau = etats.flatMap(e => e.duNiveau.slice(0, 6));
+  const estG = e => e.cours.appli.id === 'grammaire';
+  const g = etats.find(estG);
+  const grammaire = g ? [...g.etoiles, ...g.duNiveau.filter(l => !g.etoiles.includes(l)).slice(0, 6)] : [];
+  const autres = etats.filter(e => !estG(e));
+  const epingle = autres.flatMap(e => e.etoiles);
+  const niveau = autres.flatMap(e => e.duNiveau.slice(0, 6));
   const nouveau = etats.flatMap(e => e.aVenir.slice(0, 1));
-  for (const [lecons, n] of [[epingle, Math.round(manque * 0.4)], [niveau, Math.round(manque * 0.4)], [nouveau, manque]]) {
+  for (const [lecons, n] of [[grammaire, Math.round(manque * 0.35)], [epingle, Math.round(manque * 0.3)], [niveau, Math.round(manque * 0.3)], [nouveau, manque]]) {
     for (const [l, ex] of tirer(lecons, n)) {
       if (choisis.length >= manque) break;
       const q = depuisExercice(appParLettre[l.lettre], { ...ex, lecon: l.id });

@@ -12,9 +12,10 @@ export const CONFIG = {
   listeEnabled: true,
 
   // Séance
-  seanceTaille: 30, // questions par séance
+  seanceTaille: 35, // questions par séance
   partReprise: 0.25, // part maximale de questions déjà posées à revoir (sans appel à l'IA)
   partNouveau: 0.2, // kanji et mots du JLPT du niveau en cours pas encore vus
-  partSaisie: 0.33, // réponses à taper au clavier (le reste : choix, remise en ordre)
+  partGrammaire: 0.5, // part fixe de grammaire dans les questions écrites par l'IA (hors reprises et nouveautés)
+  partSaisie: 0.4, // réponses à taper au clavier (le reste : choix, remise en ordre)
   banqueMax: 800, // questions écrites par l'IA gardées pour revenir plus tard
 };

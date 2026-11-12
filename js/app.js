@@ -91,8 +91,25 @@ async function testerCle(cle) {
     if (!modeles.length) throw new IA.ErreurIA('modele', 'Clé valide, mais aucun modèle Gemini utilisable.');
     const r = IA.reglages();
     const modele = modeles.some(m => m.nom === r.modele) ? r.modele : modeles[0].nom;
-    IA.enregistrer({ cle, modele });
+    IA.enregistrer({ cle, modele, fournisseur: 'gemini' });
     reglagesEtat = { modeles, message: `✓ Clé valide. Modèle choisi : ${modele.replace(/^models\//, '')}.` };
+  } catch (e) {
+    reglagesEtat = { modeles: null, message: `✗ ${e.message}` };
+  }
+  render();
+}
+
+// Clé Claude : vérifiée sans rien dépenser (liste des modèles), puis Claude devient l'IA utilisée.
+async function testerClaude(cle) {
+  IA.enregistrer({ fournisseur: 'claude' });
+  reglagesEtat = { modeles: null, message: 'Vérification de la clé…' };
+  render();
+  try {
+    const ids = await IA.testerCleClaude(cle);
+    const r = IA.reglages();
+    const modele = ids.includes(r.modeleClaude) ? r.modeleClaude : IA.MODELES_CLAUDE.find(m => ids.includes(m.nom))?.nom || r.modeleClaude;
+    IA.enregistrer({ cleClaude: cle, modeleClaude: modele });
+    reglagesEtat = { modeles: null, message: `✓ Clé valide. Claude est maintenant l’IA utilisée (${IA.modeleActuel()}).` };
   } catch (e) {
     reglagesEtat = { modeles: null, message: `✗ ${e.message}` };
   }
@@ -136,6 +153,14 @@ async function onClick(e) {
       break;
     }
     case 'lister-modeles': testerCle(IA.reglages().cle); break;
+    case 'cle-claude': {
+      const cle = document.getElementById('cle-claude').value.trim();
+      if (cle) testerClaude(cle);
+      break;
+    }
+    case 'oublier-cle-claude':
+      if (confirm('Retirer la clé Claude de cet appareil ?')) { IA.enregistrer({ cleClaude: '' }); reglagesEtat = { modeles: null, message: '' }; render(); }
+      break;
     case 'oublier-cle':
       if (confirm('Retirer la clé Gemini de cet appareil ?')) { IA.enregistrer({ cle: '', modele: '' }); reglagesEtat = { modeles: null, message: '' }; render(); }
       break;
@@ -164,6 +189,8 @@ function onChangeInput(e) {
     app.querySelectorAll('[data-act^="demarrer-choix"]').forEach(b => { b.disabled = !n; });
   }
   if (act === 'furigana') { S.setSetting('furigana', e.target.checked); render(); }
+  if (act === 'fournisseur') { IA.enregistrer({ fournisseur: e.target.value }); reglagesEtat.message = ''; render(); }
+  if (act === 'modele-claude') { IA.enregistrer({ modeleClaude: e.target.value }); reglagesEtat.message = `Modèle : ${IA.modeleActuel()}`; render(); }
   if (act === 'modele') { IA.enregistrer({ modele: e.target.value }); reglagesEtat.message = `Modèle : ${e.target.value.replace(/^models\//, '')}`; render(); }
 }
 

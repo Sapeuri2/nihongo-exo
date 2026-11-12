@@ -109,7 +109,7 @@ export async function generer() {
     const r = await IA.appeler({ systeme: SYSTEME_SEANCE, message, schema: SCHEMA_SEANCE });
     if (seance !== s) return; // séance abandonnée entre-temps
     const valides = (r.questions || []).map(validerQuestion).filter(Boolean);
-    if (!valides.length) throw new IA.ErreurIA('reponse', 'Gemini n’a renvoyé aucune question utilisable.');
+    if (!valides.length) throw new IA.ErreurIA('reponse', `${IA.nomIA()} n’a renvoyé aucune question utilisable.`);
     const t = Date.now();
     const nouvelles = valides.map((x, i) => ({ ...x, id: nouvelId(i), source: 'ia', t }));
     for (const x of nouvelles) s.questions[x.id] = x;

@@ -61,3 +61,7 @@ details.choisir summary h2 { margin: 0; }
 @media (max-width: 420px) {
   .exo-hero { grid-template-columns: 1fr; }
 }
+
+/* Réglages : listes et choix qui tiennent sur un petit téléphone. */
+.card select { max-width: 100%; min-width: 0; }
+.card label.row { flex-wrap: wrap; }

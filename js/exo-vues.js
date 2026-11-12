@@ -30,7 +30,10 @@ export function vueAccueil() {
   h += `<section class="hero exo-hero"><button class="btn primary big" data-act="demarrer" ${s ? 'disabled' : ''}>Lancer une séance<small>${CONFIG.seanceTaille} questions${cle ? ' écrites par l’IA' : ' (exercices de tes applis)'}</small></button>
     <button class="btn" data-act="demarrer-sans-ia" ${s ? 'disabled' : ''}>Sans IA<small>exercices de tes applis, sans coût</small></button>
     <a class="btn ${s ? 'disabled' : ''}" href="#/choisir" ${s ? 'aria-disabled="true" tabindex="-1"' : ''}>🎯 Je choisis mes leçons<small>pour la prochaine séance seulement</small></a></section>`;
-  h += `<p class="muted small ia-etat">${cle ? `IA : Gemini${IA.reglages().modele ? ` (${esc(IA.reglages().modele.replace(/^models\//, ''))})` : ''} · aujourd’hui : ${c.appels} appel${c.appels > 1 ? 's' : ''}` : 'Pas encore de clé IA : <a href="#/reglages">ajoute ta clé Gemini</a> pour des questions écrites pour toi.'}</p>`;
+  const claude = IA.estClaude();
+  const modele = IA.modeleActuel();
+  const etatIA = `IA : ${claude ? esc(modele) : `Gemini${modele ? ` (${esc(modele)})` : ''}`} · aujourd’hui : ${c.appels} appel${c.appels > 1 ? 's' : ''}${claude ? ` · ${IA.dollars(c.cout)} (total ${IA.dollars(c.coutTotal)})` : ''}`;
+  h += `<p class="muted small ia-etat">${cle ? etatIA : `Pas encore de clé ${claude ? 'Claude' : 'IA'} : <a href="#/reglages">ajoute ta clé</a> pour des questions écrites pour toi.`}</p>`;
 
   const etoilesDe = a => Object.values(progression(a)?.etoiles || {}).filter(e => e?.on).length;
   const parAppli = APPS.map(a => [a.nom, etoilesDe(a)]).filter(([, n]) => n);
@@ -215,7 +218,25 @@ export function vueReglages(modeles = null, message = '') {
   const st = S.get();
   const c = IA.compteurDuJour();
   let h = '<a class="back" href="#/">← Accueil</a><h1>Réglages</h1>';
-  h += `<section class="card"><h2>IA : Google Gemini (gratuit)</h2>
+  const claude = IA.estClaude(r);
+  h += `<section class="card"><h2>IA utilisée</h2>
+    <label class="row"><input type="radio" name="fournisseur" data-act="fournisseur" value="gemini" ${claude ? '' : 'checked'}> Google Gemini <span class="muted small">(gratuit, 20 appels par jour)</span></label>
+    <label class="row"><input type="radio" name="fournisseur" data-act="fournisseur" value="claude" ${claude ? 'checked' : ''}> Claude <span class="muted small">(payant : tes crédits de la Console)</span></label>
+    <p class="muted small">Une séance = 2 appels (questions, puis bilan). Tu peux changer quand tu veux.</p></section>`;
+  h += `<section class="card"><h2>Claude</h2>
+    <p class="small">Ta clé reste sur cet appareil (à coller une fois sur le PC et une fois sur le téléphone). Elle n’est jamais dans le code ni dans le Gist.</p>
+    ${r.cleClaude ? `<p>Clé enregistrée : <code>${esc(r.cleClaude.slice(0, 10))}…${esc(r.cleClaude.slice(-4))}</code></p>
+      <p class="small">Dépensé sur cet appareil : aujourd’hui ${IA.dollars(claude ? c.cout : 0)} · depuis le début ${IA.dollars(c.coutTotal)} <span class="muted">(estimation ; le vrai solde est sur la Console)</span></p>` : ''}
+    <div class="row"><input type="password" id="cle-claude" placeholder="${r.cleClaude ? 'Nouvelle clé (sk-ant-…)' : 'Colle ta clé (sk-ant-…)'}" autocomplete="off"><button class="btn primary" data-act="cle-claude">Enregistrer et tester</button></div>
+    <p class="small" id="claude-msg">${esc(claude ? message : '')}</p>
+    <label class="row small">Modèle : <select data-act="modele-claude">${IA.MODELES_CLAUDE.map(m => `<option value="${esc(m.nom)}" ${m.nom === r.modeleClaude ? 'selected' : ''}>${esc(m.titre)}</option>`).join('')}</select></label>
+    ${r.cleClaude ? '<button class="link small" data-act="oublier-cle-claude">Retirer la clé Claude de cet appareil</button>' : ''}
+    <details class="small"><summary>Où trouver ma clé ?</summary><ol>
+    <li>Sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>, menu « API Keys », « Create Key ».</li>
+    <li>Copie-la tout de suite (elle commence par <code>sk-ant-</code>) et colle-la ici.</li>
+    <li>Laisse la recharge automatique désactivée : tu ne dépenses jamais plus que tes crédits.</li></ol></details></section>`;
+  if (claude) message = '';
+  h += `<section class="card"><h2>Google Gemini (gratuit)</h2>
     <p class="small">Ta clé reste sur cet appareil (à coller une fois sur le PC et une fois sur le téléphone). Elle n’est jamais dans le code ni dans le Gist.</p>
     ${r.cle ? `<p>Clé enregistrée : <code>${esc(r.cle.slice(0, 6))}…${esc(r.cle.slice(-4))}</code> · aujourd’hui : ${c.appels} appel${c.appels > 1 ? 's' : ''}, ${c.tokens} tokens</p>` : ''}
     <div class="row"><input type="password" id="cle-ia" placeholder="${r.cle ? 'Nouvelle clé (AIza…)' : 'Colle ta clé (AIza…)'}" autocomplete="off"><button class="btn primary" data-act="cle-ia">Enregistrer et tester</button></div>

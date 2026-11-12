@@ -16,6 +16,7 @@ export const CONFIG = {
   partReprise: 0.25, // part maximale de questions déjà posées à revoir (sans appel à l'IA)
   partNouveau: 0.2, // kanji et mots du JLPT du niveau en cours pas encore vus
   partGrammaire: 0.5, // part fixe de grammaire dans les questions écrites par l'IA (hors reprises et nouveautés)
+  trousMin: 3, // au moins 3 questions « trous » (une phrase, plusieurs réponses) par séance écrite par l'IA
   partSaisie: 0.4, // réponses à taper au clavier (le reste : choix, remise en ordre)
   banqueMax: 800, // questions écrites par l'IA gardées pour revenir plus tard
 };

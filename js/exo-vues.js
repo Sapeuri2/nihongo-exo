@@ -8,6 +8,7 @@ import { CONFIG } from './config.js';
 import { APPS, progression, urlAppli } from './exo-sources.js';
 import * as IA from './exo-ia.js';
 import * as X from './exo-seance.js';
+import { MARQUES } from './exo-outils.js';
 
 const pct = x => `${Math.round(x * 100)} %`;
 const date = t => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' ' + new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -27,7 +28,8 @@ export function vueAccueil() {
   const cle = IA.aUneCle();
   const c = IA.compteurDuJour();
   h += `<section class="hero exo-hero"><button class="btn primary big" data-act="demarrer" ${s ? 'disabled' : ''}>Lancer une séance<small>${CONFIG.seanceTaille} questions${cle ? ' écrites par l’IA' : ' (exercices de tes applis)'}</small></button>
-    <button class="btn" data-act="demarrer-sans-ia" ${s ? 'disabled' : ''}>Sans IA<small>exercices de tes applis, sans coût</small></button></section>`;
+    <button class="btn" data-act="demarrer-sans-ia" ${s ? 'disabled' : ''}>Sans IA<small>exercices de tes applis, sans coût</small></button>
+    <a class="btn ${s ? 'disabled' : ''}" href="#/choisir" ${s ? 'aria-disabled="true" tabindex="-1"' : ''}>🎯 Je choisis mes leçons<small>pour la prochaine séance seulement</small></a></section>`;
   h += `<p class="muted small ia-etat">${cle ? `IA : Gemini${IA.reglages().modele ? ` (${esc(IA.reglages().modele.replace(/^models\//, ''))})` : ''} · aujourd’hui : ${c.appels} appel${c.appels > 1 ? 's' : ''}` : 'Pas encore de clé IA : <a href="#/reglages">ajoute ta clé Gemini</a> pour des questions écrites pour toi.'}</p>`;
 
   const etoilesDe = a => Object.values(progression(a)?.etoiles || {}).filter(e => e?.on).length;
@@ -37,7 +39,7 @@ export function vueAccueil() {
     <li><span>⭐</span> ${etoiles} leçon${etoiles > 1 ? 's' : ''} étoilée${etoiles > 1 ? 's' : ''} <span class="muted small">(${parAppli.length ? parAppli.map(([nom, n]) => `${esc(nom.toLowerCase())} ${n}`).join(' · ') : 'en priorité'})</span></li>
     <li><span>📝</span> une grosse part de grammaire à produire <span class="muted small">(tes ⭐ de grammaire d’abord)</span></li>
     <li><span>📌</span> ${L.list().length} mot${L.list().length > 1 ? 's' : ''} de Ma liste</li>
-    <li><span>📚</span> les leçons déjà faites de ton niveau en cours</li>
+    <li><span>📚</span> toutes tes leçons déjà faites, tirées au hasard <span class="muted small">(les plus ratées et les plus anciennes plus souvent)</span></li>
     <li><span>✨</span> ${pct(CONFIG.partNouveau)} de nouveautés du JLPT de ton niveau</li>
     <li><span>🔁</span> ${X.aRevoir()} question${X.aRevoir() > 1 ? 's' : ''} déjà ratée${X.aRevoir() > 1 ? 's' : ''} ou à revoir</li></ul></section>`;
 
@@ -47,6 +49,28 @@ export function vueAccueil() {
   if (bl.length) {
     h += `<section class="card"><h2>Derniers bilans</h2><ul class="steps">${bl.slice(0, 8).map(b => `<li><a class="bilan-lien" href="#/bilan/${esc(b.id)}"><span>${date(b.t)}</span><span class="score">${b.score.ok}/${b.score.total}</span></a></li>`).join('')}</ul></section>`;
   }
+  return h;
+}
+
+// ---------- Je choisis mes leçons (pour la prochaine séance seulement) ----------
+
+// etats : contexte des 3 applis (null pendant le chargement) ; coches : Set des « G:n5-05 » cochés.
+export function vueChoisir(etats, coches) {
+  let h = '<a class="back" href="#/">← Accueil</a><section class="card"><h2>🎯 Je choisis mes leçons</h2><p class="muted small">Coche les leçons à travailler : elles seront au cœur de la prochaine séance. L’IA garde le choix des questions et mélange avec tes questions à revoir et un peu du reste. Rien n’est gardé après la séance.</p></section>';
+  if (!etats) return h + '<p class="muted">Chargement des leçons…</p>';
+  for (const e of etats) {
+    const lecons = e.faites;
+    const n = lecons.filter(l => coches.has(`${l.lettre}:${l.id}`)).length;
+    h += `<details class="card choisir" ${n ? 'open' : ''}><summary><h2>${esc(e.cours.appli.nom)}</h2><span class="muted small">${lecons.length ? `${lecons.length} leçon${lecons.length > 1 ? 's' : ''} faite${lecons.length > 1 ? 's' : ''}${n ? ` · ${n} cochée${n > 1 ? 's' : ''}` : ''}` : 'aucune leçon faite'}</span></summary>`;
+    h += `<ul class="choisir-liste">${[...lecons].reverse().map(l => {
+      const c = `${l.lettre}:${l.id}`;
+      const etoile = e.etoiles.includes(l) ? ' ⭐' : '';
+      return `<li><label><input type="checkbox" data-act="cocher" data-id="${esc(c)}" ${coches.has(c) ? 'checked' : ''}><span class="num">L${l.num}</span><span>${esc(l.titre)}${etoile}</span></label></li>`;
+    }).join('')}</ul></details>`;
+  }
+  const n = coches.size;
+  h += `<div class="actions choisir-go"><button class="btn primary" data-act="demarrer-choix" ${n ? '' : 'disabled'}>Lancer avec ${n} leçon${n > 1 ? 's' : ''}</button>
+    <button class="btn" data-act="demarrer-choix-sans-ia" ${n ? '' : 'disabled'}>Sans IA</button>${n ? '<button class="link small" data-act="decocher">Tout décocher</button>' : ''}</div>`;
   return h;
 }
 
@@ -76,7 +100,8 @@ export function vueSeance() {
   h += `<div class="exercise exo-q" data-id="${esc(q.id)}" data-type="${q.type}">`;
   h += `<p class="instr">${rich(q.consigne)}</p>`;
   const rempli = cur.repondu && q.type === 'choix' ? q.choix[q.bonne] : cur.repondu && q.type === 'saisie' ? q.reponses[0] : null;
-  if (q.jp && q.type !== 'ordre') h += `<p class="jp big">${q.jp.includes('＿') ? richBlank(q.jp, rempli) : rich(q.jp)}</p>`;
+  if (q.type === 'trous') h += `<p class="jp big">${phraseTrous(q, cur)}</p>`;
+  else if (q.jp && q.type !== 'ordre') h += `<p class="jp big">${q.jp.includes('＿') ? richBlank(q.jp, rempli) : rich(q.jp)}</p>`;
   // Remise en ordre : la traduction sert d'énoncé, sauf si la consigne la contient déjà (pas deux fois).
   const frDansConsigne = q.fr && q.consigne.replace(/[«»"“”\s.]/g, '').includes(q.fr.replace(/[«»"“”\s.]/g, ''));
   if (q.type === 'ordre' && q.fr && !frDansConsigne) h += `<p class="fr big-fr">${rich(q.fr)}</p>`;
@@ -91,9 +116,21 @@ export function vueSeance() {
     h += '</div>';
   } else if (q.type === 'saisie') {
     const etat = cur.repondu ? (cur.res === 'ok' ? ' good' : cur.res === 'doute' ? ' doute' : ' bad') : '';
-    h += `<div class="saisie${etat}"><input id="saisie" class="jp" lang="ja" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done"
+    h += `<div class="saisie${etat}"><input id="saisie" class="jp saisie-in" lang="ja" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done"
       placeholder="${q.script === 'kana' ? 'en hiragana…' : 'en japonais…'}" value="${esc(cur.donne || '')}" ${cur.repondu ? 'disabled' : ''}>
       ${cur.repondu ? '' : '<button class="btn primary" data-act="valider-saisie">Valider</button>'}</div>`;
+  } else if (q.type === 'trous') {
+    h += '<div class="trous">';
+    q.trous.forEach((t, i) => {
+      const r = cur.detail?.[i];
+      const etat = cur.repondu ? (r === 'ok' ? ' good' : r === 'doute' ? ' doute' : ' bad') : '';
+      const val = cur.repondu ? (cur.choisi?.[i] ?? '') : '';
+      h += `<label class="saisie trou${etat}"><span class="marque">${MARQUES[i]}</span>${t.indication ? `<span class="indic jp">${rich(t.indication)}</span>` : ''}
+        <input id="trou-${i}" class="jp saisie-in" data-trou="${i}" lang="ja" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="${i < q.trous.length - 1 ? 'next' : 'done'}"
+        placeholder="${t.script === 'kana' ? 'en hiragana…' : 'en japonais…'}" value="${esc(val)}" ${cur.repondu ? 'disabled' : ''}></label>`;
+    });
+    h += '</div>';
+    if (!cur.repondu) h += '<div class="actions"><button class="btn primary" data-act="valider-saisie">Valider</button></div>';
   } else {
     const cls = cur.repondu ? (cur.res === 'ok' ? ' good' : ' bad') : '';
     h += `<div class="built${cls}">${cur.place.map(i => `<button class="tile" data-act="retirer" data-i="${i}" ${cur.repondu ? 'disabled' : ''}>${rich(q.morceaux[i])}</button>`).join('') || '<span class="muted">Touche les morceaux ci-dessous…</span>'}</div>`;
@@ -105,12 +142,26 @@ export function vueSeance() {
   return h;
 }
 
+// Phrase d'une question à trous : ①, ② … deviennent des cases (remplies par la bonne réponse une fois répondu).
+function phraseTrous(q, cur) {
+  return String(q.jp).split(new RegExp(`([${MARQUES}])`)).map(part => {
+    const i = MARQUES.indexOf(part);
+    if (part.length !== 1 || i < 0) return rich(part);
+    const r = cur.detail?.[i];
+    return `<span class="blank trou-marque${cur.repondu ? ` filled ${r === 'ok' ? 'ok' : 'ko'}` : ''}">${cur.repondu ? rich(q.trous[i].reponses[0]) : part}</span>`;
+  }).join('');
+}
+
 function vueRetour(q, cur) {
   const titre = cur.res === 'ok' ? '✓ Correct' : cur.res === 'doute' ? '? Réponse différente de celles prévues' : '✗ Raté';
   let h = `<div class="fb ${cur.res === 'ok' ? 'ok' : 'ko'}"><strong>${titre}</strong>`;
   if (cur.res !== 'ok') {
-    const attendu = q.type === 'choix' ? q.choix[q.bonne] : q.type === 'saisie' ? q.reponses.join(' / ') : `${q.morceaux.join('')}`;
-    h += `<p>Réponse attendue : <span class="jp">${rich(attendu)}</span></p>`;
+    if (q.type === 'trous') {
+      h += `<ul class="attendus">${q.trous.map((t, i) => `<li class="${cur.detail?.[i] === 'ok' ? 'ok' : cur.detail?.[i] === 'doute' ? '' : 'ko'}">${MARQUES[i]} <span class="jp">${rich(t.reponses.join(' / '))}</span></li>`).join('')}</ul>`;
+    } else {
+      const attendu = q.type === 'choix' ? q.choix[q.bonne] : q.type === 'saisie' ? q.reponses.join(' / ') : `${q.morceaux.join('')}`;
+      h += `<p>Réponse attendue : <span class="jp">${rich(attendu)}</span></p>`;
+    }
   }
   if (cur.res === 'doute') h += '<p class="muted small">Ce n’est pas forcément faux : l’IA la vérifiera dans le bilan.</p>';
   if (q.explication) h += `<p>${rich(q.explication)}</p>`;

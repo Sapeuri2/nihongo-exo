@@ -9,7 +9,7 @@ import { CONFIG } from './config.js';
 import { APPS, appParLettre, chargerCours, etatAppli } from './exo-sources.js';
 import * as IA from './exo-ia.js';
 import { SCHEMA_BILAN, SCHEMA_SEANCE, SYSTEME_BILAN, SYSTEME_SEANCE, depuisExercice, messageBilan, messageSeance, resumeQuestion } from './exo-strategie.js';
-import { elaguerBanque, fusionBanque, fusionBilans, fusionCarnet, quotas, reprises, validerQuestion, verifierSaisie } from './exo-outils.js';
+import { MARQUES, elaguerBanque, fusionBanque, fusionBilans, fusionCarnet, quotas, reprises, tirerPondere, validerQuestion, verifierSaisie, verifierTrous } from './exo-outils.js';
 
 // Règles de fusion entre appareils des champs propres au Challenger.
 S.fusionChamp('banque', fusionBanque);
@@ -17,7 +17,7 @@ S.fusionChamp('carnet', fusionCarnet);
 S.fusionChamp('bilans', fusionBilans);
 
 const SEANCE_KEY = `${CONFIG.storageKey}:seance`;
-const PARTS = { reprise: CONFIG.partReprise, nouveau: CONFIG.partNouveau, grammaire: CONFIG.partGrammaire, saisie: CONFIG.partSaisie };
+const PARTS = { reprise: CONFIG.partReprise, nouveau: CONFIG.partNouveau, grammaire: CONFIG.partGrammaire, saisie: CONFIG.partSaisie, trous: CONFIG.trousMin };
 const ecouteurs = new Set();
 let seance = charger();
 
@@ -70,17 +70,25 @@ const nouvelId = i => `x${Date.now().toString(36)}${i.toString(36).padStart(2, '
 
 // ---------- Préparer une séance ----------
 
-export async function demarrer({ sansIA = false } = {}) {
+// Leçons choisies pour une séance : identifiants « G:n5-05 » → leçons (celles qui existent encore).
+function leconsChoisies(etats, ids) {
+  const par = Object.fromEntries(etats.map(e => [e.cours.appli.lettre, e.cours]));
+  return (ids || []).map(c => { const [lettre, id] = String(c).split(':'); return par[lettre]?.parId[id]; }).filter(Boolean);
+}
+
+// choisies : leçons cochées pour CETTE séance seulement (« Je choisis mes leçons »), ex. ['G:n5-05', 'K:k4-02'].
+export async function demarrer({ sansIA = false, choisies = [] } = {}) {
   const { etats } = await contexte();
   const items = S.get().items;
   const aReprendre = reprises(banque(), items);
-  const q = quotas(CONFIG.seanceTaille, PARTS, aReprendre.length);
+  const choix = leconsChoisies(etats, choisies).map(l => `${l.lettre}:${l.id}`);
+  const q = quotas(CONFIG.seanceTaille, PARTS, aReprendre.length, { focus: choix.length > 0 });
   const questions = {};
   for (const id of aReprendre.slice(0, q.reprise)) questions[id] = banque()[id];
   seance = {
     id: `s${Date.now().toString(36)}`, debut: Date.now(), mode: sansIA || !IA.aUneCle() ? 'cours' : 'ia',
     strategie: '', questions, file: melanger(Object.keys(questions)).map(id => ({ id, essai: 0 })), idx: 0,
-    premiers: {}, reponses: {}, cur: null, gen: null, genErreur: '', quotas: q, fin: false, bilanErreur: '',
+    premiers: {}, reponses: {}, cur: null, gen: null, genErreur: '', quotas: q, fin: false, bilanErreur: '', choisies: choix,
   };
   if (seance.mode === 'cours') completerSansIA(etats);
   else seance.gen = 'attente';
@@ -97,7 +105,7 @@ export async function generer() {
   const s = seance;
   try {
     const { etats } = await contexte();
-    const message = messageSeance({ etats, liste: L.list(), carnet: carnet()?.texte, reussite: reussite(), q: s.quotas });
+    const message = messageSeance({ etats, liste: L.list(), carnet: carnet()?.texte, reussite: reussite(), q: s.quotas, choisies: leconsChoisies(etats, s.choisies) });
     const r = await IA.appeler({ systeme: SYSTEME_SEANCE, message, schema: SCHEMA_SEANCE });
     if (seance !== s) return; // séance abandonnée entre-temps
     const valides = (r.questions || []).map(validerQuestion).filter(Boolean);
@@ -127,14 +135,18 @@ function completerSansIA(etats) {
   const manque = CONFIG.seanceTaille - s.file.length;
   const tirer = (lecons, n) => melanger(lecons.flatMap(l => l.exercices.map(ex => [l, ex]))).slice(0, n);
   const choisis = [];
+  const focus = leconsChoisies(etats, s.choisies);
   const estG = e => e.cours.appli.id === 'grammaire';
   const g = etats.find(estG);
-  const grammaire = g ? [...g.etoiles, ...g.duNiveau.filter(l => !g.etoiles.includes(l)).slice(0, 6)] : [];
+  const grammaire = g ? [...g.etoiles, ...tirerPondere(g.faites.filter(l => !g.etoiles.includes(l)), g.poids, 6)] : [];
   const autres = etats.filter(e => !estG(e));
   const epingle = autres.flatMap(e => e.etoiles);
-  const niveau = autres.flatMap(e => e.duNiveau.slice(0, 6));
+  const niveau = autres.flatMap(e => tirerPondere(e.faites.filter(l => !e.etoiles.includes(l)), e.poids, 6));
   const nouveau = etats.flatMap(e => e.aVenir.slice(0, 1));
-  for (const [lecons, n] of [[grammaire, Math.round(manque * 0.35)], [epingle, Math.round(manque * 0.3)], [niveau, Math.round(manque * 0.3)], [nouveau, manque]]) {
+  const tranches = focus.length
+    ? [[focus, Math.round(manque * 0.65)], [grammaire, Math.round(manque * 0.15)], [[...epingle, ...niveau], Math.round(manque * 0.15)], [nouveau, manque]]
+    : [[grammaire, Math.round(manque * 0.35)], [epingle, Math.round(manque * 0.3)], [niveau, Math.round(manque * 0.3)], [nouveau, manque]];
+  for (const [lecons, n] of tranches) {
     for (const [l, ex] of tirer(lecons, n)) {
       if (choisis.length >= manque) break;
       const q = depuisExercice(appParLettre[l.lettre], { ...ex, lecon: l.id });
@@ -175,6 +187,13 @@ export function repondre(valeur) {
   let donne;
   if (q.type === 'choix') { res = valeur === q.bonne ? 'ok' : 'faux'; donne = plain(q.choix[valeur]); }
   else if (q.type === 'saisie') { res = verifierSaisie(valeur, q); donne = String(valeur); }
+  else if (q.type === 'trous') {
+    const v = q.trous.map((_, i) => String(valeur?.[i] ?? ''));
+    const r = verifierTrous(v, q);
+    res = r.res;
+    cur.detail = r.detail;
+    donne = v.map((x, i) => `${MARQUES[i]} ${x || '—'}`).join(' ; ');
+  }
   else {
     const fait = cur.place.map(i => q.morceaux[i]);
     res = [q.morceaux, ...(q.alt || [])].some(sol => sol.length === fait.length && sol.every((t, i) => t === fait[i])) ? 'ok' : 'faux';

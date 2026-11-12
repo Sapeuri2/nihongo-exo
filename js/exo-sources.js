@@ -86,7 +86,7 @@ export function etatAppli(cours, now = Date.now()) {
   const duNiveau = faites.filter(l => l.niveau === niveau).sort((x, y) => poids(y) - poids(x));
   // Pas encore vues, dans l'ordre du cours (la suite du niveau en cours).
   const aVenir = cours.lecons.filter(l => !prog.lessons?.[l.id]?.done && l.niveau === niveau);
-  return { cours, faites, niveau, etoiles, duNiveau, aVenir, stats };
+  return { cours, faites, niveau, etoiles, duNiveau, aVenir, stats, poids };
 }
 
 // Kanji déjà vus (leçons faites de l'appli kanji) : l'IA écrit les autres avec des furigana.

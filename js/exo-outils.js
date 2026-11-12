@@ -27,6 +27,17 @@ export function verifierSaisie(tape, q) {
   return q.script === 'libre' ? 'doute' : 'faux';
 }
 
+// Question à trous : chaque trou est vérifié à part. 'ok' si tous sont justes ; 'doute' si aucun n'est faux mais
+// une réponse libre diffère de celles prévues ; 'faux' sinon. `detail` : le résultat de chaque trou.
+export function verifierTrous(tapes, q) {
+  const detail = q.trous.map((t, i) => verifierSaisie(tapes[i] ?? '', t));
+  const res = detail.includes('faux') ? 'faux' : detail.includes('doute') ? 'doute' : 'ok';
+  return { res, detail };
+}
+
+// Marqueurs des trous dans la phrase : ① ② ③ …
+export const MARQUES = '①②③④⑤⑥';
+
 // ---------- Questions reçues de l'IA ----------
 
 const texte = v => (typeof v === 'string' ? v.trim() : '');
@@ -56,6 +67,18 @@ export function validerQuestion(x) {
     const reponses = Array.isArray(x.reponses) ? x.reponses.map(texte).filter(Boolean) : [];
     if (!reponses.length) return null;
     Object.assign(q, { reponses, script: x.script === 'libre' ? 'libre' : 'kana' });
+  } else if (q.type === 'trous') {
+    const trous = Array.isArray(x.trous) ? x.trous.map(t => ({
+      indication: texte(t?.indication),
+      reponses: Array.isArray(t?.reponses) ? t.reponses.map(texte).filter(Boolean) : [],
+      script: t?.script === 'libre' ? 'libre' : 'kana',
+    })) : [];
+    if (trous.length < 2 || trous.length > MARQUES.length || trous.some(t => !t.reponses.length)) return null;
+    // Chaque trou est marqué dans la phrase (①, ②…) ou porte une indication (ex. « 読み：森 ») ; pas de marque en trop.
+    const marques = [...q.jp].filter(c => MARQUES.includes(c));
+    if (new Set(marques).size !== marques.length || marques.some(m => MARQUES.indexOf(m) >= trous.length)) return null;
+    if (trous.some((t, i) => !q.jp.includes(MARQUES[i]) && !t.indication)) return null;
+    Object.assign(q, { trous });
   } else if (q.type === 'ordre') {
     const morceaux = Array.isArray(x.morceaux) ? x.morceaux.map(texte).filter(Boolean) : [];
     if (morceaux.length < 3 || morceaux.length > 8) return null;
@@ -63,7 +86,7 @@ export function validerQuestion(x) {
   } else return null;
   for (const k of ['consigne', 'jp', 'fr', 'explication']) if (!furiganaOk(q[k])) return null;
   if (consigneDonneReponse(q)) return null;
-  for (const c of [...(q.choix || []), ...(q.reponses || []), ...(q.morceaux || [])]) if (!furiganaOk(c)) return null;
+  for (const c of [...(q.choix || []), ...(q.reponses || []), ...(q.morceaux || []), ...(q.trous || []).flatMap(t => [t.indication, ...t.reponses])]) if (!furiganaOk(c)) return null;
   return q;
 }
 
@@ -73,23 +96,37 @@ export function consigneDonneReponse(q) {
   // (Les mots « ひらがな », « カタカナ », « かな » entre parenthèses indiquent l'écriture attendue : permis.)
   const kanaEntreParentheses = [...sansFurigana(q.consigne).matchAll(/[（(]([\u3040-\u30ff・ー]+)[)）]/g)].map(m => m[1]);
   if (kanaEntreParentheses.some(k => !/^(ひらがな|カタカナ|かな|カナ)$/.test(k))) return true;
-  const attendues = q.type === 'choix' ? [q.choix[q.bonne]] : q.type === 'saisie' ? q.reponses : [];
-  return attendues.some(r => { const a = normaliser(r, 'libre'); return a.length > 0 && /[\u3040-\u30ff\u3400-\u9fff]/.test(a) && c.includes(a); });
+  if ((q.type === 'saisie' || q.type === 'trous') && formeNommee(q.consigne)) return true;
+  const trous = q.trous || [];
+  const attendues = q.type === 'choix' ? [q.choix[q.bonne]] : q.type === 'saisie' ? q.reponses : trous.flatMap(t => t.reponses);
+  // Pour un trou, ni la consigne ni son indication ne doivent contenir la réponse.
+  const textes = [c, ...trous.map(t => normaliser(t.indication, 'libre'))];
+  return attendues.some(r => { const a = normaliser(r, 'libre'); return a.length > 0 && /[\u3040-\u30ff\u3400-\u9fff]/.test(a) && textes.some(x => x.includes(a)); });
+}
+
+// La consigne nomme la forme grammaticale à produire (« forme て », « mets à la forme ている », « ない形 »…) :
+// c'est à lui de choisir la forme d'après le sens. (Les formes en choix multiples restent permises.)
+export function formeNommee(consigne) {
+  const c = sansFurigana(consigne);
+  return /forme\s*(en\s*|du\s*|de\s*)?[«"“]?\s*[〜~～]?[\u3040-\u30ff]/i.test(c)
+    || /(て|た|ない|ます|辞書|可能|意向|受け?身|使役|条件|命令|ば)\s*形/.test(c)
+    || /\b(au|à l['’]|en)\s*(passé|négatif|potentiel|volitif|passif|causatif|conditionnel|impératif)/i.test(c);
 }
 
 // ---------- Choix des cibles d'une séance ----------
 
 // Répartition d'une séance de `taille` questions : reprises (déjà vues, à revoir), nouveautés (pas encore vues),
-// une part fixe de grammaire (⭐ de grammaire d'abord), le reste partagé entre ce qui est épinglé (⭐ leçons, 📌 mots)
-// et le niveau en cours.
-export function quotas(taille, parts, nbReprisesDispo) {
+// leçons choisies par lui pour cette séance (`focus`, s'il en a choisi), une part fixe de grammaire, le reste partagé
+// entre ce qui est épinglé (⭐ leçons, 📌 mots : insistance) et toutes ses autres leçons déjà faites.
+export function quotas(taille, parts, nbReprisesDispo, { focus = false } = {}) {
   const reprise = Math.min(nbReprisesDispo, Math.round(taille * parts.reprise));
-  const nouveau = Math.round(taille * parts.nouveau);
+  const nouveau = Math.round(taille * parts.nouveau * (focus ? 0.5 : 1));
   const reste = taille - reprise - nouveau;
-  const grammaire = Math.round(reste * (parts.grammaire || 0));
-  const autres = reste - grammaire;
-  const epingle = Math.round(autres * 0.55);
-  return { reprise, nouveau, grammaire, epingle, niveau: autres - epingle, saisie: Math.round((taille - reprise) * parts.saisie) };
+  const choisies = focus ? Math.round(reste * 0.65) : 0;
+  const grammaire = Math.round((reste - choisies) * (parts.grammaire || 0));
+  const autres = reste - choisies - grammaire;
+  const epingle = Math.round(autres * 0.45);
+  return { reprise, nouveau, choisies, grammaire, epingle, niveau: autres - epingle, saisie: Math.round((taille - reprise) * parts.saisie), trous: parts.trous || 0 };
 }
 
 // Questions déjà posées par le Challenger à reprendre : d'abord celles à revoir (ratées, échéance passée).
@@ -103,6 +140,21 @@ export function reprises(banque, items, now = Date.now()) {
 export function poidsLecon(stat, now = Date.now()) {
   const jours = stat.t ? (now - stat.t) / DAY : 30;
   return 1 + Math.min(stat.ko || 0, 6) + Math.min(jours / 7, 4) + (stat.dues || 0) * 0.5;
+}
+
+// Tire `n` leçons au hasard, chacune avec une chance proportionnelle à son poids (sans remise) :
+// les leçons faibles ou anciennes reviennent plus souvent, mais toutes finissent par revenir.
+export function tirerPondere(lecons, poids, n, alea = Math.random) {
+  const reste = lecons.map(l => [l, Math.max(0.01, poids(l))]);
+  const out = [];
+  while (out.length < n && reste.length) {
+    const total = reste.reduce((t, [, p]) => t + p, 0);
+    let r = alea() * total;
+    let i = 0;
+    while (i < reste.length - 1 && (r -= reste[i][1]) > 0) i++;
+    out.push(reste.splice(i, 1)[0][0]);
+  }
+  return out;
 }
 
 // ---------- Fusion entre appareils (champs propres au Challenger dans la progression) ----------

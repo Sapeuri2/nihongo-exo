@@ -130,7 +130,22 @@ Les mots épinglés (📌) forment **une seule liste pour toutes les applis** du
 - Page `#/liste` + bouton 📌 + carte d'accueil : tri, « Réviser ma liste » (20 questions générées : mot → sens, sens → mot, kanji → lecture ; mauvaises réponses prises dans la liste, complétées par le vocabulaire de l'appli si elle est courte), export Anki (CSV `recto;verso;tags`), JSON, copie.
 - Ces révisions comptent dans le 🔥 mais pas dans la progression de l'appli.
 
+## Format : niveaux (N5, N4…)
+
+Chaque bloc porte son niveau : `"level": "N5"` ou `"level": "N4"`. Les blocs d'un niveau sont rangés ensemble, dans
+l'ordre, dans `data/manifest.json` (le N5 puis le N4), fichiers `data/n5/blocNN.json` puis `data/n4/blocNN.json`.
+Dès qu'un bloc d'un nouveau niveau est dans le manifeste, l'accueil propose « 🚀 Commencer le N4 maintenant » :
+l'utilisateur peut ouvrir ce niveau sans finir le précédent (qui reste ouvert là où il en était).
+
 ## Historique des changements du moteur
+
+### 2026-11-13 — Commencer le N4 sans finir le N5
+- Accueil : carte « 🚀 Commencer le N4 maintenant » quand l'appli contient un niveau suivant pas encore commencé.
+  Une fois ouvert, le N4 avance normalement (leçons, tests, examens) ; le N5 reste ouvert là où il en était ;
+  « Continuer » mène au N4 ; « refermer » possible tant qu'aucune étape du N4 n'est faite.
+- Progression : nouveau champ `niveaux` (`{ N4: { on, t } }`), fusionné entre appareils comme les étoiles. Rien d'autre ne change.
+- Contenu : chaque bloc doit porter `"level"` (déjà le cas) ; les blocs N4 viennent **après** le N5 dans le manifeste.
+  Avec `examEvery` = 4, garder un nombre de blocs N5 multiple de 4 (sinon un examen mélangerait N5 et N4).
 
 ### 2026-11-11 — Le Challenger (4ᵉ appli) et le lien « étoiler »
 - Nouvelle appli **Challenger** (`nihongo-exo`, violette) : des séances de 30 questions écrites par une IA (Gemini, avec

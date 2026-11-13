@@ -142,6 +142,17 @@ export function setLessonStar(id, on) {
   persist();
 }
 
+// Niveaux ouverts en avance (« Commencer le N4 maintenant ») : niveaux = { N4: { on, t } }.
+// Même règle que les étoiles : la décision la plus récente l'emporte entre appareils.
+export function niveauOuvert(niveau) {
+  return !!etoilesOk(state.niveaux)[niveau]?.on;
+}
+
+export function setNiveauOuvert(niveau, on) {
+  state.niveaux = { ...etoilesOk(state.niveaux), [niveau]: { on: !!on, t: Date.now() } };
+  persist();
+}
+
 export function reset() {
   const settings = state.settings;
   state = { ...empty(), resetAt: Date.now(), settings };
@@ -177,6 +188,8 @@ export function merge(a, b) {
     ...unknown(b),
     // Étoiles des leçons : pour chaque leçon, la décision la plus récente (mise ou retrait) l'emporte.
     ...(a.etoiles || b.etoiles ? { etoiles: mergeMap(etoilesOk(a.etoiles), etoilesOk(b.etoiles), latest) } : {}),
+    // Niveaux ouverts en avance : par niveau, la décision la plus récente l'emporte.
+    ...(a.niveaux || b.niveaux ? { niveaux: mergeMap(etoilesOk(a.niveaux), etoilesOk(b.niveaux), latest) } : {}),
     ...Object.fromEntries(Object.entries(fusions).filter(([n]) => a[n] !== undefined || b[n] !== undefined).map(([n, f]) => [n, f(a[n], b[n])])),
     v: 1,
     resetAt,

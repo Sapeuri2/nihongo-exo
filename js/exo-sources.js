@@ -71,7 +71,9 @@ export function etatAppli(cours, now = Date.now()) {
   const prog = progression(cours.appli) || {};
   const faites = cours.lecons.filter(l => prog.lessons?.[l.id]?.done);
   const premiere = cours.lecons.find(l => !prog.lessons?.[l.id]?.done);
-  const niveau = (premiere || cours.lecons.at(-1))?.niveau || '';
+  // Niveau ouvert en avance dans l'appli (« Commencer le N4 maintenant ») : c'est lui, le niveau en cours.
+  const ouverts = cours.lecons.filter(l => prog.niveaux?.[l.niveau]?.on).map(l => l.niveau);
+  const niveau = ouverts.at(-1) || (premiere || cours.lecons.at(-1))?.niveau || '';
   const etoiles = Object.entries(prog.etoiles || {}).filter(([id, e]) => e?.on && cours.parId[id]).map(([id]) => cours.parId[id]);
   // Erreurs et révisions en retard par leçon, d'après la répétition espacée de l'appli.
   const stats = {};
